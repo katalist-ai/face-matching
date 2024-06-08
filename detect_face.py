@@ -17,7 +17,7 @@ app.prepare(ctx_id=0, det_size=(640, 640))
 
 def detect_face(img_num):
     image_path = os.path.join(img_dir, prepare_number(img_num) + '.png')
-    img = cv2.imread(image_path)
+    img = cv2.imread(image_path)[..., [2, 1, 0]]
     faces = app.get(img, max_num=1)
     if len(faces) == 0:
         print(f"No face detected in image {img_num}")

@@ -11,20 +11,21 @@ def read_rgb_image(img_path):
 
 
 sex_mapping = {
-    'male': [0.0, 1.0],
-    'female': [1.0, 0.0]
+    'female': [1.0, 0.0],
+    'male': [0.0, 1.0]
 }
 age_mapping = {
-    'child': [0.0, 1.0],
-    'adult': [1.0, 0.0]
+    'adult': [1.0, 0.0],
+    'child': [0.0, 1.0]
 }
 
 
 class FacesDataset(Dataset):
-    def __init__(self, labels_path, img_dir, transform=None):
+    def __init__(self, labels_path, img_dir, transform=None, device='cpu'):
         self.labels = json.load(open(labels_path))
         self.img_dir = img_dir
         self.transform = transform
+        self.device = device
 
     def __len__(self):
         return len(self.labels)
@@ -37,4 +38,5 @@ class FacesDataset(Dataset):
         sex = img_data['sex']
         if self.transform:
             image = self.transform(image)
-        return image, (torch.Tensor(age_mapping[age]), torch.tensor(sex_mapping[sex]))
+        return (image.to(self.device),
+                (torch.Tensor(age_mapping[age]).to(self.device), torch.Tensor(sex_mapping[sex]).to(self.device)))

@@ -46,7 +46,7 @@ async def fetch(url: str, key: int, payload: dict, metadata, semaphore: Semaphor
     async with semaphore:
         print(f"Fetching image number {key}")
         async with httpx.AsyncClient() as client:
-            response = await client.post(url, json=payload, headers=JSON_HEADERS, timeout=60)
+            response = await client.post(url, json=payload, headers=JSON_HEADERS, timeout=70)
             res = response.json()
             img = res['images'][0]
             img = utils.base64_2_img(img)
@@ -69,15 +69,15 @@ async def run_requests(url: str, constructed_prompts: list[tuple], max_concurren
                 tasks.append(task)
             else:
                 pbar.update(1)
-            await asyncio.sleep(0.01)
+            await asyncio.sleep(0.001)
         await asyncio.gather(*tasks)
 
 
 def main():
     raw_prompts = read_prompts('data/prompts_raw.txt')
-    constructed_prompts = construct_prompts(raw_prompts)[:2000]
+    constructed_prompts = construct_prompts(raw_prompts)[:6000]
     url = "http://34.72.181.10:3000/generate"
-    max_concurrent_requests = 7
+    max_concurrent_requests = 12
     logger.info(f"Number of constructed prompts: {len(constructed_prompts)}")
     logger.info(f"Max concurrent requests: {max_concurrent_requests}")
     pm = ProgressManager("data/progress.json", "data/images")
