@@ -6,16 +6,25 @@ import httpx
 from tqdm import tqdm as tqdm_sync
 import utils
 from progress_manager import ProgressManager
-
+from dotenv import load_dotenv
+import os
 from prompt_constructor import read_prompts, construct_prompts
+
+load_dotenv()
+
+
+
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s', datefmt='%H:%M:%S', )
 logger = logging.getLogger()
 
-API_TOKEN = "NXm9ucb4t5WJsr5oH0D5UdleIFZl6hS321UfojoJnH0BnxFxxAmnmOpb6J69KZSY"
+KATALIST_TOKEN = os.getenv("KATALIST_TOKEN")
+if KATALIST_TOKEN is None:
+    raise ValueError("KATALIST_TOKEN is not set in the environment variables")
+
 JSON_HEADERS = {
     "Content-Type": "application/json",
-    "Authorization": f"Bearer {API_TOKEN}",
+    "Authorization": f"Bearer {KATALIST_TOKEN}",
 }
 
 random.seed(42)
@@ -73,7 +82,7 @@ async def run_requests(url: str, constructed_prompts: list[tuple], max_concurren
         await asyncio.gather(*tasks)
 
 
-def main():
+async def main():
     raw_prompts = read_prompts('data/prompts_raw.txt')
     constructed_prompts = construct_prompts(raw_prompts)[:6000]
     url = "http://34.72.181.10:3000/generate"
@@ -81,8 +90,8 @@ def main():
     logger.info(f"Number of constructed prompts: {len(constructed_prompts)}")
     logger.info(f"Max concurrent requests: {max_concurrent_requests}")
     pm = ProgressManager("data/progress.json", "data/images")
-    asyncio.run(run_requests(url, constructed_prompts, max_concurrent_requests, pm))
+    await run_requests(url, constructed_prompts, max_concurrent_requests, pm)
 
 
 if __name__ == '__main__':
-    main()
+    asyncio.run(main())
