@@ -2,3 +2,4 @@ checkpoints
 wandb
 .idea
 data
+.env
