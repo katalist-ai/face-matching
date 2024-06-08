@@ -4,9 +4,9 @@ import os
 import cv2
 from insightface.app import FaceAnalysis
 
-from const import data_dir
-from imgs import read_rgb_image, write_rgb_image
-from utils import prepare_number, square_bbox, pad_bbox, is_valid_bbox
+from utils import is_valid_bbox, pad_bbox, prepare_number, square_bbox
+from utils.const import data_dir
+from utils.imgs import read_rgb_image, write_rgb_image
 
 
 def mkdirifnx(path):
@@ -14,13 +14,13 @@ def mkdirifnx(path):
         os.makedirs(path)
 
 
-faces_dir = os.path.join(data_dir, 'test_faces')
+faces_dir = os.path.join(data_dir, "test_faces")
 mkdirifnx(faces_dir)
-faces_img_dir = os.path.join(faces_dir, 'imgs')
+faces_img_dir = os.path.join(faces_dir, "imgs")
 mkdirifnx(faces_img_dir)
-source_imgs = os.path.join(data_dir, 'test_images')
+source_imgs = os.path.join(data_dir, "test_images")
 
-app = FaceAnalysis(allowed_modules=['detection'])
+app = FaceAnalysis(allowed_modules=["detection"])
 app.prepare(ctx_id=0, det_size=(640, 640))
 
 
@@ -49,7 +49,7 @@ def main():
         if not is_valid_bbox(bbox, image_shape):
             print(f"Invalid bbox for {img_path}, {padded_bbox}")
             continue
-        face = img[bbox[1]:bbox[3], bbox[0]:bbox[2]]
+        face = img[bbox[1] : bbox[3], bbox[0] : bbox[2]]
         if face.shape[0] <= 16 or face.shape[1] <= 16:
             print(f"Face too small for {img_path}")
             continue
@@ -64,8 +64,8 @@ def main():
         )
         write_rgb_image(face_path, face)
         n += 1
-    json.dump(face_imgs_data, open(os.path.join(faces_dir, 'test_labels.json'), 'w'))
+    json.dump(face_imgs_data, open(os.path.join(faces_dir, "test_labels.json"), "w"))
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

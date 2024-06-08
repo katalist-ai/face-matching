@@ -43,7 +43,7 @@ class ProgressManager:
 
     def get_face_info(self, key: str | int):
         prepared_key = prepare_number(key)
-        if 'face_det' not in self.progress[prepared_key]:
+        if "face_det" not in self.progress[prepared_key]:
             return None
         return self.progress[prepared_key]["face_det"]
 
@@ -58,4 +58,4 @@ class ProgressManager:
         return self.progress[prepared_key]["metadata"]
 
     def save_changes(self):
-        json.dump(self.progress, open(self.file_name, 'w'), indent=1)
+        json.dump(self.progress, open(self.file_name, "w"), indent=1)

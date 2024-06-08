@@ -8,7 +8,7 @@ from PIL import Image
 
 
 def count_images_in_dir(directory):
-    types = ('.jpg', '.png', '.jpeg')  # the tuple of file types
+    types = (".jpg", ".png", ".jpeg")  # the tuple of file types
     count = 0
     for root, dirs, files in os.walk(directory):
         for file in files:
@@ -19,7 +19,7 @@ def count_images_in_dir(directory):
 
 def dict_to_hash(d):
     d_json = json.dumps(d, sort_keys=True)
-    return hashlib.sha256(d_json.encode('utf-8')).hexdigest()
+    return hashlib.sha256(d_json.encode("utf-8")).hexdigest()
 
 
 def img_2_base64(image: Image.Image) -> str:
@@ -42,14 +42,6 @@ def read_base64_image(path: str, as_image=False) -> str | Image.Image:
     if as_image:
         return base64_2_img(base64_string)
     return base64_string
-
-
-def resize_image(image: Image.Image, new_size: int) -> Image.Image:
-    original_size = min(image.size)
-    if original_size <= new_size:
-        return image
-    k = new_size / original_size
-    return image.resize((int(image.width * k), int(image.height * k)), Image.LANCZOS)
 
 
 def convert_number_to_string(number: int) -> str:

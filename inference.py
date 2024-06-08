@@ -1,7 +1,7 @@
 import numpy as np
 import onnxruntime as ort
 
-from imgs import read_rgb_image
+from utils.imgs import read_rgb_image
 
 RESNET_MEAN = np.array([0.485, 0.456, 0.406], dtype=np.float32).reshape(3, 1, 1)
 RESNET_STD = np.array([0.229, 0.224, 0.225], dtype=np.float32).reshape(3, 1, 1)
@@ -27,16 +27,8 @@ def softmax(x):
     return e_x / np.sum(e_x, axis=1, keepdims=True)
 
 
-label_map = {
-    'sex': {
-        0: 'female',
-        1: 'male'
-    },
-    'age': {
-        0: 'adult',
-        1: 'child'
-    }
-}
+label_map = {"sex": {0: "female", 1: "male"}, "age": {0: "adult", 1: "child"}}
+
 
 class AgeSexInference:
     def __init__(self, onnx_model_path):
@@ -46,7 +38,7 @@ class AgeSexInference:
         if preprocess:
             image = preprocess_image(image)
         """RGB image in the format [B, C, H, W]"""
-        age, sex = self.model.run(None, {'face_image': image})
+        age, sex = self.model.run(None, {"face_image": image})
         return age, sex
 
     def predict_probs(self, image: np.ndarray, *args, **kwargs):
@@ -59,8 +51,8 @@ class AgeSexInference:
         age, sex = self.predict(image, *args, **kwargs)
         age_idx = np.argmax(age, axis=1)
         sex_idx = np.argmax(sex, axis=1)
-        return ([label_map['age'][idx] for idx in age_idx],
-                [label_map['sex'][idx] for idx in sex_idx])
+        return [label_map["age"][idx] for idx in age_idx], [label_map["sex"][idx] for idx in sex_idx]
+
 
 class AgeSexInceptionResnet:
     def __init__(self, onnx_model_path):
@@ -70,7 +62,7 @@ class AgeSexInceptionResnet:
         if preprocess:
             image = preprocess_image(image)
         """RGB image in the format [B, C, H, W]"""
-        age, sex = self.model.run(None, {'face_image': image})
+        age, sex = self.model.run(None, {"face_image": image})
         return age, sex
 
     def predict_probs(self, image: np.ndarray, *args, **kwargs):
@@ -83,30 +75,33 @@ class AgeSexInceptionResnet:
         age, sex = self.predict(image, *args, **kwargs)
         age_idx = np.argmax(age, axis=1)
         sex_idx = np.argmax(sex, axis=1)
-        return ([label_map['age'][idx] for idx in age_idx],
-                [label_map['sex'][idx] for idx in sex_idx])
+        return [label_map["age"][idx] for idx in age_idx], [label_map["sex"][idx] for idx in sex_idx]
 
 
 def main():
     # Load the exported ONNX model
-    import torch
-    from train import AgeSexClassify
-    from dataset import FacesDataset
     import os
+
+    import torch
     from torchvision import transforms
-    from const import faces_dir
+
+    from dataset import FacesDataset
+    from models.custom_resnet import AgeSexClassify
+    from utils.const import faces_dir
 
     # check if the onnx model is working as well as the pytorch model
-    image1 = preprocess_image(read_rgb_image('data/faces/imgs/00000000.png'))
-    image2 = preprocess_image(read_rgb_image('data/faces/imgs/00000165.png'))
+    image1 = preprocess_image(read_rgb_image("data/faces/imgs/00000000.png"))
+    image2 = preprocess_image(read_rgb_image("data/faces/imgs/00000165.png"))
     print(image1[0].mean())
-    transform = transforms.Compose([
-        transforms.ToTensor(),
-        transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
-    ])
-    img_dir = os.path.join(faces_dir, 'imgs')
-    json_path = os.path.join(faces_dir, 'labels.json')
-    full_dataset = FacesDataset(json_path, img_dir, transform=transform, device='cpu')
+    transform = transforms.Compose(
+        [
+            transforms.ToTensor(),
+            transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
+        ]
+    )
+    img_dir = os.path.join(faces_dir, "imgs")
+    json_path = os.path.join(faces_dir, "labels.json")
+    full_dataset = FacesDataset(json_path, img_dir, transform=transform, device="cpu")
     img1 = full_dataset[0][0]
     print(img1[0].mean())
     img2 = full_dataset[165][0]
@@ -114,9 +109,9 @@ def main():
     images_torch = np.array([img1, img2])
     images_torch = torch.Tensor(images_torch)
     print(images.shape)
-    model = AgeSexInference('checkpoints/model.onnx')
+    model = AgeSexInference("checkpoints/model.onnx")
     model_torch = AgeSexClassify()
-    model_torch.load_state_dict(torch.load('checkpoints/age_sex_34_full.pth'))
+    model_torch.load_state_dict(torch.load("checkpoints/age_sex_34_full.pth"))
     model_torch.eval()
     with torch.no_grad():
         print(model.predict(images, preprocess=False))
@@ -127,5 +122,5 @@ def main():
     # check predict probs
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

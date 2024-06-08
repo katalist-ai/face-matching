@@ -1,16 +1,15 @@
 import os
-from itertools import chain
 
 import torch
 import torch.nn as nn
 from torch import optim
 from torch.utils.data import DataLoader, random_split
 from torchvision import transforms
+from train_resnet import convert_model_to_onnx, test, train, validate
 
-from const import faces_dir, checkpoints_dir
 from dataset import FacesDataset
-from inception_resnet_v1 import InceptionResnetV1
-from train_resnet import train, validate, test, convert_model_to_onnx
+from models.inception_resnet_v1 import FaceNetCustom
+from utils.const import checkpoints_dir, faces_dir
 
 
 def fixed_image_standardization(image_tensor):
@@ -26,53 +25,21 @@ def prewhiten(x):
     return y
 
 
-class FaceNetCustom(torch.nn.Module):
-    def __init__(self):
-        super(FaceNetCustom, self).__init__()
-        self.base_model = InceptionResnetV1(pretrained='vggface2')
-
-        # freeze parameters
-        for param in self.base_model.parameters():
-            param.requires_grad = False
-
-        # unfreeze parameters
-        self.layers_to_unfreeze = [self.base_model.last_linear, self.base_model.last_bn,
-                                   self.base_model.block8, self.base_model.repeat_3]
-        for layer in self.layers_to_unfreeze:
-            for param in layer.parameters():
-                param.requires_grad = True
-
-        num_ftrs = self.base_model.logits.in_features
-        self.base_model.logits = torch.nn.Identity()
-
-        self.age = torch.nn.Linear(num_ftrs, 2)
-        self.sex = torch.nn.Linear(num_ftrs, 2)
-
-    def forward(self, x):
-        x = self.base_model(x)
-        x_age = self.age(x)
-        x_sex = self.sex(x)
-        return x_age, x_sex
-
-    def get_trainable_parameters(self):
-        return chain(*(layer.parameters() for layer in self.layers_to_unfreeze),
-                     self.age.parameters(),
-                     self.sex.parameters())
-
-
 def main():
     mps = torch.backends.mps.is_available()
     device = torch.device("cuda" if torch.cuda.is_available() else "mps" if mps else "cpu")
     print("DEVICE:", device)
-    transform = transforms.Compose([
-        transforms.ToTensor(),
-        transforms.Resize((160, 160)),
-        transforms.ColorJitter(brightness=0.4, contrast=0.4, saturation=0.4, hue=0.15),
-        transforms.RandomGrayscale(p=0.2),
-        transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
-    ])
-    img_dir = os.path.join(faces_dir, 'imgs')
-    json_path = os.path.join(faces_dir, 'labels.json')
+    transform = transforms.Compose(
+        [
+            transforms.ToTensor(),
+            transforms.Resize((160, 160)),
+            transforms.ColorJitter(brightness=0.4, contrast=0.4, saturation=0.4, hue=0.15),
+            transforms.RandomGrayscale(p=0.2),
+            transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
+        ]
+    )
+    img_dir = os.path.join(faces_dir, "imgs")
+    json_path = os.path.join(faces_dir, "labels.json")
     full_dataset = FacesDataset(json_path, img_dir, transform=transform, device=device)
     train_size = int(0.75 * len(full_dataset))
     val_size = int(0.1 * train_size)
@@ -105,11 +72,11 @@ def main():
         l, l1, l2 = validate(model, test_loader, criterion)
         f1_age, f1_sex = test(model, val_loader, device)
         print(f"TESTING: LOSS AVG: {l}, LOSSage {l1}, LOSSSex: {l2}\n F1 age: {f1_age} F1 sex: {f1_sex}")
-    convert_model_to_onnx(model, os.path.join(checkpoints_dir, 'model_inception_resnet.onnx'), transform=transform)
+    convert_model_to_onnx(model, os.path.join(checkpoints_dir, "model_inception_resnet.onnx"), transform=transform)
     print("SAVING MODEL ONNX")
-    torch.save(model.state_dict(), 'checkpoints/age_sex_inception_resnet_full.pth')
+    torch.save(model.state_dict(), "checkpoints/age_sex_inception_resnet_full.pth")
     print("SAVING MODEL STATE DICT")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

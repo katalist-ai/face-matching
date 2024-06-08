@@ -6,17 +6,18 @@ from insightface.app import FaceAnalysis
 from tqdm import tqdm
 
 from progress_manager import ProgressManager
-from utils import prepare_number, count_images_in_dir
+from utils import count_images_in_dir, prepare_number
 
 NWORKERS = 4
 
-img_dir = os.path.join('data', 'images')
+img_dir = os.path.join("data", "images")
 
-app = FaceAnalysis(allowed_modules=['detection'])
+app = FaceAnalysis(allowed_modules=["detection"])
 app.prepare(ctx_id=0, det_size=(640, 640))
 
+
 def detect_face(img_num):
-    image_path = os.path.join(img_dir, prepare_number(img_num) + '.png')
+    image_path = os.path.join(img_dir, prepare_number(img_num) + ".png")
     img = cv2.imread(image_path)[..., [2, 1, 0]]
     faces = app.get(img, max_num=1)
     if len(faces) == 0:
@@ -25,9 +26,9 @@ def detect_face(img_num):
     return faces[0]
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     n_images = count_images_in_dir(img_dir)
-    pm = ProgressManager(os.path.join('data', 'progress.json'), img_dir, write_on_change=False)
+    pm = ProgressManager(os.path.join("data", "progress.json"), img_dir, write_on_change=False)
     for i in tqdm(range(n_images)):
         has_face_info = pm.has_face_info(i)
         if has_face_info:

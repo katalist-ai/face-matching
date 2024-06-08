@@ -1,51 +1,17 @@
 import os
-from itertools import chain
 
 import cv2
 import torch
 import torch.onnx
 import torchmetrics
 from torch import nn, optim
-from torch.optim.lr_scheduler import StepLR
-from torch.utils.data import random_split, DataLoader
+from torch.utils.data import DataLoader, random_split
 from torchvision import transforms
-from torchvision.models.resnet import ResNet34_Weights
-from torchvision.models.resnet import resnet34
 from tqdm import tqdm
 
-from const import faces_dir, checkpoints_dir
 from dataset import FacesDataset
-
-
-
-class AgeSexClassify(nn.Module):
-    def __init__(self):
-        super(AgeSexClassify, self).__init__()
-        self.base_model = resnet34(weights=ResNet34_Weights.DEFAULT)
-
-        # freeze the base model weights
-        for param in self.base_model.parameters():
-            param.requires_grad = False
-
-        # unfreeze the last layer (layer4)
-        for param in self.base_model.layer4.parameters():
-            param.requires_grad = True
-
-        num_ftrs = self.base_model.fc.in_features
-        self.base_model.fc = nn.Identity()
-
-        # Add new layers for age and sex classification
-        self.age = nn.Linear(num_ftrs, 2)
-        self.sex = nn.Linear(num_ftrs, 2)
-
-    def forward(self, x):
-        x = self.base_model(x)
-        x_age = self.age(x)
-        x_sex = self.sex(x)
-        return x_age, x_sex
-
-    def get_trainable_parameters(self):
-        return chain(self.base_model.layer4.parameters(), self.age.parameters(), self.sex.parameters())
+from models.custom_resnet import AgeSexClassify
+from utils.const import checkpoints_dir, faces_dir
 
 
 def train(model, train_loader, optimizer, criterion, epoch):
@@ -66,7 +32,8 @@ def train(model, train_loader, optimizer, criterion, epoch):
         loss.backward()
         optimizer.step()
         pbar.set_description(
-            f'Epoch {epoch} - Loss: {losses[2] / n:.3f} - Loss1: {losses[0] / n:.3f} - Loss2: {losses[1] / n:.3f}')
+            f"Epoch {epoch} - Loss: {losses[2] / n:.3f} - Loss1: {losses[0] / n:.3f} - Loss2: {losses[1] / n:.3f}"
+        )
         n += 1
 
 
@@ -90,8 +57,8 @@ def validate(model, val_loader, criterion):
 
 def test(model, test_loader, device):
     model.eval()
-    f1_age_metric = torchmetrics.F1Score(task='binary').to(device)
-    f1_sex_metric = torchmetrics.F1Score(task='binary').to(device)
+    f1_age_metric = torchmetrics.F1Score(task="binary").to(device)
+    f1_sex_metric = torchmetrics.F1Score(task="binary").to(device)
     with torch.no_grad():
         for data, targets in test_loader:
             age, sex = targets
@@ -105,45 +72,45 @@ def test(model, test_loader, device):
 
 
 def convert_model_to_onnx(model, model_path, transform):
-    img = cv2.imread('data/faces/imgs/00000000.png')[..., [2, 1, 0]]
+    img = cv2.imread("data/faces/imgs/00000000.png")[..., [2, 1, 0]]
     if transform:
         img = transform(img)
     img = img.unsqueeze(0)
     model.cpu()
     model.eval()
     with torch.no_grad():
-        torch.onnx.export(model,  # model being run
-                          img,  # model input (or a tuple for multiple inputs)
-                          model_path,  # where to save the model (can be a file or file-like object)
-                          export_params=True,  # store the trained parameter weights inside the model file
-                          do_constant_folding=True,  # whether to execute constant folding for optimization
-                          input_names=['face_image'],  # the model's input names
-                          output_names=['age', 'sex'],  # the model's output names
-                          dynamic_axes={'face_image': {0: 'batch_size'},  # variable length axes
-                                        'age': {0: 'batch_size'},
-                                        'sex': {0: 'batch_size'}},
-                          verbose=False
-                          )
+        torch.onnx.export(
+            model,  # model being run
+            img,  # model input (or a tuple for multiple inputs)
+            model_path,  # where to save the model (can be a file or file-like object)
+            export_params=True,  # store the trained parameter weights inside the model file
+            do_constant_folding=True,  # whether to execute constant folding for optimization
+            input_names=["face_image"],  # the model's input names
+            output_names=["age", "sex"],  # the model's output names
+            dynamic_axes={
+                "face_image": {0: "batch_size"},  # variable length axes
+                "age": {0: "batch_size"},
+                "sex": {0: "batch_size"},
+            },
+            verbose=False,
+        )
 
 
 def main():
     mps = torch.backends.mps.is_available()
     device = torch.device("cuda" if torch.cuda.is_available() else "mps" if mps else "cpu")
     print("DEVICE:", device)
-    train_transform = transforms.Compose([
-        transforms.ToTensor(),
-        transforms.Resize((160, 160)),
-        transforms.ColorJitter(brightness=0.4, contrast=0.4, saturation=0.4, hue=0.15),
-        transforms.RandomGrayscale(p=0.2),
-        transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
-    ])
-    test_transform = transforms.Compose([
-        transforms.ToTensor(),
-        transforms.Resize((160, 160)),
-        transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
-    ])
-    img_dir = os.path.join(faces_dir, 'imgs')
-    json_path = os.path.join(faces_dir, 'labels.json')
+    train_transform = transforms.Compose(
+        [
+            transforms.ToTensor(),
+            transforms.Resize((160, 160)),
+            transforms.ColorJitter(brightness=0.4, contrast=0.4, saturation=0.4, hue=0.15),
+            transforms.RandomGrayscale(p=0.2),
+            transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
+        ]
+    )
+    img_dir = os.path.join(faces_dir, "imgs")
+    json_path = os.path.join(faces_dir, "labels.json")
     full_dataset = FacesDataset(json_path, img_dir, transform=train_transform, device=device)
     train_size = int(0.75 * len(full_dataset))
     val_size = int(0.1 * train_size)
@@ -172,11 +139,11 @@ def main():
         l, l1, l2 = validate(model, test_loader, criterion)
         f1_age, f1_sex = test(model, test_loader, device)
         print(f"TESTING: LOSS AVG: {l}, LOSSage {l1}, LOSSSex: {l2}\n F1 age: {f1_age} F1 sex: {f1_sex}")
-    convert_model_to_onnx(model, os.path.join(checkpoints_dir, 'model_resnet.onnx'), transform=train_transform)
+    convert_model_to_onnx(model, os.path.join(checkpoints_dir, "model_resnet.onnx"), transform=train_transform)
     print("SAVING MODEL ONNX")
-    torch.save(model.state_dict(), 'checkpoints/age_sex_34_full.pth')
+    torch.save(model.state_dict(), "checkpoints/age_sex_34_full.pth")
     print("SAVING MODEL STATE DICT")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
