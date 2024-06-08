@@ -74,7 +74,7 @@ def main():
         print(f"TESTING: LOSS AVG: {l}, LOSSage {l1}, LOSSSex: {l2}\n F1 age: {f1_age} F1 sex: {f1_sex}")
     convert_model_to_onnx(model, os.path.join(checkpoints_dir, "model_inception_resnet.onnx"), transform=transform)
     print("SAVING MODEL ONNX")
-    torch.save(model.state_dict(), "checkpoints/age_sex_inception_resnet_full.pth")
+    torch.save(model.state_dict(), os.path.join(checkpoints_dir, "age_sex_inception_resnet_full.pth"))
     print("SAVING MODEL STATE DICT")
 
 

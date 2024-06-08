@@ -67,7 +67,11 @@ def construct_prompts(prompts):
 
 
 def main():
-    raw_prompts = read_prompts("data/prompts_raw.txt")
+    import os
+
+    from utils.const import data_dir
+
+    raw_prompts = read_prompts(os.path.join(data_dir, "prompts_raw.txt"))
     constructed_prompts = construct_prompts(raw_prompts)
     for prompt in constructed_prompts:
         print(prompt)

@@ -11,6 +11,7 @@ from tqdm import tqdm as tqdm_sync
 
 import utils
 from progress_manager import ProgressManager
+from utils import const
 
 load_dotenv()
 
@@ -88,13 +89,13 @@ async def run_requests(url: str, constructed_prompts: list[tuple], max_concurren
 
 
 async def main():
-    raw_prompts = read_prompts("data/prompts_raw.txt")
+    raw_prompts = read_prompts(os.path.join(const.data_dir, "prompts_raw.txt"))
     constructed_prompts = construct_prompts(raw_prompts)[:6000]
     url = "http://34.72.181.10:3000/generate"
     max_concurrent_requests = 12
     logger.info(f"Number of constructed prompts: {len(constructed_prompts)}")
     logger.info(f"Max concurrent requests: {max_concurrent_requests}")
-    pm = ProgressManager("data/progress.json", "data/images")
+    pm = ProgressManager(os.path.join(const.data_dir, "progress.json"), os.path.join(const.data_dir, "images"))
     await run_requests(url, constructed_prompts, max_concurrent_requests, pm)
 
 

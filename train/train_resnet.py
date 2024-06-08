@@ -72,7 +72,7 @@ def test(model, test_loader, device):
 
 
 def convert_model_to_onnx(model, model_path, transform):
-    img = cv2.imread("data/faces/imgs/00000000.png")[..., [2, 1, 0]]
+    img = cv2.imread(os.path.join(faces_dir, "imgs", "00000000.png"))[..., [2, 1, 0]]
     if transform:
         img = transform(img)
     img = img.unsqueeze(0)
@@ -141,7 +141,7 @@ def main():
         print(f"TESTING: LOSS AVG: {l}, LOSSage {l1}, LOSSSex: {l2}\n F1 age: {f1_age} F1 sex: {f1_sex}")
     convert_model_to_onnx(model, os.path.join(checkpoints_dir, "model_resnet.onnx"), transform=train_transform)
     print("SAVING MODEL ONNX")
-    torch.save(model.state_dict(), "checkpoints/age_sex_34_full.pth")
+    torch.save(model.state_dict(), os.path.join(checkpoints_dir, "age_sex_34_full.pth"))
     print("SAVING MODEL STATE DICT")
 
 

@@ -7,10 +7,9 @@ from tqdm import tqdm
 
 from progress_manager import ProgressManager
 from utils import count_images_in_dir, prepare_number
+from utils.const import data_dir, img_dir
 
 NWORKERS = 4
-
-img_dir = os.path.join("data", "images")
 
 app = FaceAnalysis(allowed_modules=["detection"])
 app.prepare(ctx_id=0, det_size=(640, 640))
@@ -28,7 +27,7 @@ def detect_face(img_num):
 
 if __name__ == "__main__":
     n_images = count_images_in_dir(img_dir)
-    pm = ProgressManager(os.path.join("data", "progress.json"), img_dir, write_on_change=False)
+    pm = ProgressManager(os.path.join(data_dir, "progress.json"), img_dir, write_on_change=False)
     for i in tqdm(range(n_images)):
         has_face_info = pm.has_face_info(i)
         if has_face_info:
